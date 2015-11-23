@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+
+# Needs: pip install nose, mock
+
+pip freeze | grep ^nose || (echo "Must pip install nose"; exit 1)
+pip freeze | grep ^mock || (echo "Must pip install mock"; exit 1)
+
+cd webapp
+/envs/default/bin/python manage.py test core multiauth
+cd ../tornado
+/envs/default/bin/python /envs/default/bin/nosetests
+

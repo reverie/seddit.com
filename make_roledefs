@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+import subprocess
+
+ROLES = ['nginx', 'django', 'database', 'xmpp', 'smtp']
+
+ROLEDEFS = {
+    'nginx':    ['i-3b6cc07f'],
+    'xmpp':     ['i-3b6cc07f'],
+    'django':   ['i-3b6cc07f'],
+    'smtp':   ['i-3b6cc07f'],
+    'database': ['i-3b6cc07f'],
+}
+
+assert set(ROLES) == set(ROLEDEFS.keys())
+
+def get_line_with(lines, substr):
+    matches = [l for l in lines if substr in l]
+    assert len(matches) == 1
+    return matches[0]
+
+def get_host_info(lines, instance_ids):
+    """Returns external_host, internal_ip pairs for instance_ids."""
+    result = []
+    for i in instance_ids:
+        l = get_line_with(lines, i)
+        data = filter(None, [w.strip() for w in l.split()])
+        external_hostname = data[3]
+        internal_ip = data[14]
+        result.append((external_hostname, internal_ip))
+    return result
+
+def format_role(role, host_pairs, instance_ids):
+    return "    '%s':    %s, # AWS %s" % (role, repr(host_pairs), ','.join(instance_ids))
+
+def get_raw_data():
+    p = subprocess.Popen(['ec2-describe-instances', '--region=us-west-1'], stdout=subprocess.PIPE)
+    assert not p.wait() # exit code 0
+    return p.stdout.read()
+
+def main():
+    data = get_raw_data()
+    lines = data.split('\n')
+    print 'env.my_roledefs = {'
+    for role in ROLES:
+        instance_ids = ROLEDEFS[role]
+        host_info = get_host_info(lines, instance_ids)
+        print format_role(role, host_info, instance_ids)
+    print '}'
+
+if __name__ == '__main__':
+    main()
